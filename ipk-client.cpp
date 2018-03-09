@@ -18,6 +18,8 @@
 #include <map>
 using namespace std;
 
+#define BUFFSIZE 1024
+
 struct Options {
     bool hFlag;
     bool pFlag;
@@ -133,23 +135,43 @@ int main(int argc,char *argv[]) {
   int opt = parseOptions(argc,argv,&options);
   if (opt < 0) return opt;
 
+  char sendBuff[BUFFSIZE];
+  char recBuff[BUFFSIZE];
   int clientSocket = socket(AF_INET, SOCK_STREAM,0);
   if (clientSocket <= 0) {
     cerr << "ERROR -3: socket creation failure\n";
     return -3;
   }
 
-  sockaddr_in serverAddr;
-  serverAddr.sin_family = AF_INET; // adress family = internet
   int port = stoi(options.port,nullptr);
-  serverAddr.sin_port = htons(port); // port assigmnet
+
+  struct sockaddr_in serverAddr;
+  serverAddr.sin_family = AF_INET; // adress family = internet
+  serverAddr.sin_port = htons(port);; // port assigmnet
   serverAddr.sin_addr.s_addr = inet_addr(options.host.c_str()); // set adress to host
-  
 
+  if (connect(clientSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
+    cerr << "ERROR -4: connection failure\n";
+    close(clientSocket);
+    return -4;
+  }
 
+  strcpy(sendBuff, "Hello"); // greet reciever
 
+  if (send(clientSocket, sendBuff, strlen(sendBuff), 0) < 0) {
+    cerr << "ERROR -5: sending data failure\n";
+    close(clientSocket);
+    return -5;
+  }
 
+  if(recv(clientSocket, recBuff, BUFFSIZE, 0) < 0) {
+    cerr << "ERROR -6: recieving data failure\n";
+    close(clientSocket);
+    return -6;
+  }
 
+  printf("message from server: %s\n", recBuff);
 
+  close(clientSocket);
   return EXIT_SUCCESS;
 }
