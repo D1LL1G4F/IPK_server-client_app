@@ -129,6 +129,22 @@ int parseOptions(int argc, char *argv[],Options *option) {
   return 0;
 }
 
+void createRequest(char *buffer,int reqOpt, string login) {
+  if (buffer == NULL) {
+    cerr << "ERROR -99: internal error occured while creating request message\n";
+    exit(-99);
+  }
+  if (login.size()+10 > BUFFSIZE) {
+    cerr << "ERROR -98: login is too big!\n";
+    exit(-98);
+  }
+  memset(buffer, 0, BUFFSIZE);
+
+
+  strcpy(buffer,to_string(reqOpt).c_str());
+  if (login.size()) strcat(buffer,login.c_str());
+}
+
 int main(int argc,char *argv[]) {
 
   struct Options options;
@@ -156,7 +172,7 @@ int main(int argc,char *argv[]) {
     return -4;
   }
 
-  strcpy(sendBuff, "Hello"); // greet reciever
+  createRequest(sendBuff,opt,options.login);
 
   if (send(clientSocket, sendBuff, strlen(sendBuff), 0) < 0) {
     cerr << "ERROR -5: sending data failure\n";

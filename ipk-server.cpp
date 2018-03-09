@@ -58,6 +58,12 @@ int parseOptions(int argc, char *argv[], string* port) {
   return 0;
 }
 
+void decodeRequest(char* buffer,string* login,int* requestType) {
+  string message = buffer;
+  std::string::size_type sz;   // alias of size_t
+  *requestType = stoi(message,&sz);
+  *login = message.substr(sz);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -100,9 +106,18 @@ int main(int argc, char *argv[]) {
 
       int res = 0;
       while (true) {
+        memset(recBuff, 0, BUFFSIZE);
+        memset(sendBuff,0,BUFFSIZE);
         res = recv(connectSocket, recBuff, BUFFSIZE,0);
         if (res <= 0) break;
-        cout << recBuff << "\n";
+
+        string login;
+        int requestType;
+
+        decodeRequest(recBuff,&login,&requestType);
+
+        cout << "Request type: " << requestType << "." << endl;
+        cout << "Login: " << login << "." << endl;
 
         strcpy(sendBuff, "Hello from the other side!");
 
