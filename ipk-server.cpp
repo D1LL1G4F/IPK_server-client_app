@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
   char sendBuff[BUFFSIZE];
   char recBuff[BUFFSIZE];
 
-  int serverSocket = socket(AF_INET, SOCK_STREAM,0);
-  if (serverSocket <= 0) {
+  int wellcomeSocket = socket(AF_INET, SOCK_STREAM,0);
+  if (wellcomeSocket <= 0) {
     cerr << "ERROR -3: socket creation failure\n";
     return -3;
   }
@@ -81,16 +81,23 @@ int main(int argc, char *argv[]) {
   serverAddr.sin_addr.s_addr = INADDR_ANY; // listen to any interface
   serverAddr.sin_port = htons(port);// port assigmnet
 
-  if (bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
+  if (bind(wellcomeSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
     cerr << "ERROR -4: server bind failure\n";
-    close(serverSocket);
+    close(wellcomeSocket);
     return -4;
   }
 
-  if ((listen(serverSocket, 10)) < 0) { // listen to max 10 connections
+  if ((listen(wellcomeSocket, 10)) < 0) { // listen to max 10 connections
     cerr << "ERROR -5: server listen failure\n";
-    close(serverSocket);
+    close(wellcomeSocket);
     return -5;
+  }
+
+  while(true) { // TODO
+    int connectSocket = accept(wellcomeSocket,(struct sockaddr*)&sa_client, &sa_client_len);
+    if (comm_socket > 0) {
+      //
+    }
   }
 
 
