@@ -126,7 +126,8 @@ int parseOptions(int argc, char *argv[],Options *option) {
     return -2;
   }
 
-  return 0;
+  cerr << "ERROR -1: missing [-n|-f|-l] option, usage: ./ipk-client -h host -p port [-n|-f|-l] login \n";
+  return -1;
 }
 
 void createRequest(char *buffer,int reqOpt, string login) {

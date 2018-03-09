@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
 #include <map>
 using namespace std;
 
@@ -115,11 +116,24 @@ int main(int argc, char *argv[]) {
         int requestType;
 
         decodeRequest(recBuff,&login,&requestType);
+        ifstream data( "/etc/passwd" );
 
-        cout << "Request type: " << requestType << "." << endl;
-        cout << "Login: " << login << "." << endl;
-
-        strcpy(sendBuff, "Hello from the other side!");
+        switch (requestType) {
+          case 1:
+            // -n
+            
+            break;
+          case 2:
+            // -f
+            break;
+          case 3:
+            // -l
+            break;
+          default:
+            strcpy(sendBuff, "1SERVER ERROR: invalid request from client\n");
+            break;
+        }
+        data.close();
 
         send(connectSocket, sendBuff, BUFFSIZE, 0);
       }
