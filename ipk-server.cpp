@@ -65,11 +65,8 @@ int main(int argc, char *argv[]) {
   int errCheck = parseOptions(argc,argv,&portArg);
   if (errCheck) return errCheck;
 
-  char sendBuff[BUFFSIZE];
-  char recBuff[BUFFSIZE];
-
-  int wellcomeSocket = socket(AF_INET, SOCK_STREAM,0);
-  if (wellcomeSocket <= 0) {
+  int welcomeSocket = socket(AF_INET, SOCK_STREAM,0);
+  if (welcomeSocket <= 0) {
     cerr << "ERROR -3: socket creation failure\n";
     return -3;
   }
@@ -81,22 +78,37 @@ int main(int argc, char *argv[]) {
   serverAddr.sin_addr.s_addr = INADDR_ANY; // listen to any interface
   serverAddr.sin_port = htons(port);// port assigmnet
 
-  if (bind(wellcomeSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
+  if (bind(welcomeSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
     cerr << "ERROR -4: server bind failure\n";
-    close(wellcomeSocket);
+    close(welcomeSocket);
     return -4;
   }
 
-  if ((listen(wellcomeSocket, 10)) < 0) { // listen to max 10 connections
+  if ((listen(welcomeSocket, 10)) < 0) { // listen to max 10 connections
     cerr << "ERROR -5: server listen failure\n";
-    close(wellcomeSocket);
+    close(welcomeSocket);
     return -5;
   }
 
-  while(true) { // TODO
-    int connectSocket = accept(wellcomeSocket,(struct sockaddr*)&sa_client, &sa_client_len);
-    if (comm_socket > 0) {
-      //
+  while(true) {
+    struct sockaddr_storage serverStorage;
+    socklen_t storSize = sizeof(serverStorage);
+    int connectSocket = accept(welcomeSocket,(struct sockaddr*)&serverStorage, &storSize);
+    if (connectSocket > 0) {
+      char sendBuff[BUFFSIZE];
+      char recBuff[BUFFSIZE];
+
+      int res = 0;
+      while (true) {
+        res = recv(connectSocket, recBuff, BUFFSIZE,0);
+        if (res <= 0) break;
+        cout << recBuff << "\n";
+
+        strcpy(sendBuff, "Hello from the other side!");
+
+        send(connectSocket, sendBuff, BUFFSIZE, 0);
+      }
+      close(connectSocket);
     }
   }
 
@@ -105,7 +117,6 @@ int main(int argc, char *argv[]) {
 
 
 
-
-
+  close(welcomeSocket);
   return 0;
 }
