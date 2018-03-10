@@ -22,6 +22,16 @@ using namespace std;
 
 #define BUFFSIZE 1024
 
+struct requestMsg {
+  int reqOpt;
+  char login[BUFFSIZE-sizeof(int)];
+};
+
+struct responseMsg {
+  int retVal;
+  char msg[BUFFSIZE-sizeof(int)];
+};
+
 bool alreadySet(bool flag,int opt) {
   if (flag) {
     cerr << "ERROR -2: argument: \"-" << opt << "\" can't be set multiple times\n";
@@ -61,10 +71,22 @@ int parseOptions(int argc, char *argv[], string* port) {
 }
 
 void decodeRequest(char* buffer,string* login,int* requestType) {
-  string message = buffer;
-  std::string::size_type sz;   // alias of size_t
-  *requestType = stoi(message,&sz);
-  *login = message.substr(sz);
+  if (buffer == NULL) {
+    cerr << "ERROR -99: internal error occured while decoding client request\n";
+    exit(-99);
+  }
+
+  struct requestMsg request;
+  memcpy(&request,buffer,sizeof(char)*BUFFSIZE);
+  *login = request.login;
+  *requestType = request.reqOpt;
+}
+
+void flushFullBuffer(char *sendBuff,struct responseMsg* response,int *buffcnt) {
+  response->retVal = 1;
+  memcpy(sendBuff,response,sizeof(struct responseMsg));
+  memset(response->msg,0,BUFFSIZE-sizeof(int));
+  *buffcnt = 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -119,6 +141,9 @@ int main(int argc, char *argv[]) {
         decodeRequest(recBuff,&login,&requestType);
         ifstream data( "/etc/passwd" );
         regex regExpr;
+        struct responseMsg response;
+        response.retVal = -1;
+        int buffcnt = 0;
 
         switch (requestType) {
           case 1:
@@ -132,21 +157,50 @@ int main(int argc, char *argv[]) {
             break;
           case 3:
             // -l
-            strcpy(sendBuff,"0");
-            regExpr = "^"+login+".*:";
-            for( std::string line; getline( data, line ); ) {
+            regExpr = "^"+login+".*:.*";
+
+            for( string line; getline( data, line ); ) {
               if (regex_match(line,regExpr)) {
-                //TODO
+                response.retVal=0;
+                char c;
+                int i = 0;
+                c = line.at(i);
+                while (c != ':') {
+                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                    flushFullBuffer(sendBuff,&response,&buffcnt);
+                    send(connectSocket,sendBuff, BUFFSIZE, 0);
+                    memset(sendBuff,0,BUFFSIZE);
+                  }
+                  response.msg[buffcnt] = c;
+                  buffcnt++;
+                  c = line.at(++i);
+                }
+                if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                  flushFullBuffer(sendBuff,&response,&buffcnt);
+                  send(connectSocket,sendBuff, BUFFSIZE, 0);
+                  memset(sendBuff,0,BUFFSIZE);
+                }
+                response.msg[buffcnt] = '\n';
+                buffcnt++;
               }
             }
+
+            if (response.retVal < 0) strcpy(response.msg, "SERVER ERROR: login not found\n");
+            memcpy(&sendBuff,&response,sizeof(response));
+            send(connectSocket, sendBuff, BUFFSIZE, 0);
+            memset(sendBuff,0,BUFFSIZE);
+
+
             break;
           default:
-            strcpy(sendBuff, "1SERVER ERROR: invalid request from client\n");
+            response.retVal = -1;
+            strcpy(response.msg, "SERVER ERROR: invalid request from client\n");
+            memcpy(&sendBuff,&response,sizeof(response));
+            send(connectSocket, sendBuff, BUFFSIZE, 0);
+            memset(sendBuff,0,BUFFSIZE);
             break;
         }
         data.close();
-
-        send(connectSocket, sendBuff, BUFFSIZE, 0);
       }
       close(connectSocket);
     }

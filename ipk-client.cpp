@@ -20,6 +20,16 @@ using namespace std;
 
 #define BUFFSIZE 1024
 
+struct requestMsg {
+  int reqOpt;
+  char login[BUFFSIZE-sizeof(int)];
+};
+
+struct responseMsg {
+  int retVal;
+  char msg[BUFFSIZE-sizeof(int)];
+};
+
 struct Options {
     bool hFlag;
     bool pFlag;
@@ -135,15 +145,34 @@ void createRequest(char *buffer,int reqOpt, string login) {
     cerr << "ERROR -99: internal error occured while creating request message\n";
     exit(-99);
   }
-  if (login.size()+10 > BUFFSIZE) {
+  if (sizeof(login)+sizeof(int) > BUFFSIZE) {
     cerr << "ERROR -98: login is too big!\n";
     exit(-98);
   }
   memset(buffer, 0, BUFFSIZE);
+  struct requestMsg request;
+  request.reqOpt = reqOpt;
+  if (login.empty()) {
+    strcpy(request.login,login.c_str());
+  }
+  memcpy(buffer,&request,sizeof(request));
+}
 
+int decodeResponse(char* buffer) {
+  if (buffer == NULL) {
+    cerr << "ERROR -99: internal error occured while decoding client request\n";
+    exit(-99);
+  }
 
-  strcpy(buffer,to_string(reqOpt).c_str());
-  if (login.size()) strcat(buffer,login.c_str());
+  struct responseMsg response;
+  memcpy(&response,buffer,sizeof(response));
+  if (response.retVal < 0) {
+    cerr << response.msg;
+    return response.retVal;
+  } else {
+    cout << response.msg << flush;
+  }
+  return response.retVal;
 }
 
 int main(int argc,char *argv[]) {
@@ -175,7 +204,7 @@ int main(int argc,char *argv[]) {
 
   createRequest(sendBuff,opt,options.login);
 
-  if (send(clientSocket, sendBuff, strlen(sendBuff), 0) < 0) {
+  if (send(clientSocket, sendBuff, BUFFSIZE, 0) < 0) {
     cerr << "ERROR -5: sending data failure\n";
     close(clientSocket);
     return -5;
@@ -187,8 +216,19 @@ int main(int argc,char *argv[]) {
     return -6;
   }
 
-  printf("message from server: %s\n", recBuff);
+  int retVal = decodeResponse(recBuff);
+  while (retVal) {
+    if (retVal < 0) break;
+
+    if(recv(clientSocket, recBuff, BUFFSIZE, 0) < 0) {
+      cerr << "ERROR -6: recieving data failure\n";
+      close(clientSocket);
+      retVal =-6;
+      break;
+    }
+    retVal = decodeResponse(recBuff);
+  }
 
   close(clientSocket);
-  return EXIT_SUCCESS;
+  return retVal;
 }
