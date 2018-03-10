@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <regex>
 #include <map>
 using namespace std;
 
@@ -117,17 +118,27 @@ int main(int argc, char *argv[]) {
 
         decodeRequest(recBuff,&login,&requestType);
         ifstream data( "/etc/passwd" );
+        regex regExpr;
 
         switch (requestType) {
           case 1:
             // -n
-            
+            for( std::string line; getline( data, line ); ) {
+
+            }
             break;
           case 2:
             // -f
             break;
           case 3:
             // -l
+            strcpy(sendBuff,"0");
+            regExpr = "^"+login+".*:";
+            for( std::string line; getline( data, line ); ) {
+              if (regex_match(line,regExpr)) {
+                //TODO
+              }
+            }
             break;
           default:
             strcpy(sendBuff, "1SERVER ERROR: invalid request from client\n");
