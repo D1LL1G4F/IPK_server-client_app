@@ -1,16 +1,12 @@
 #include <sys/types.h>
-#ifdef _WIN32
-  #include <winsock2.h>
-#else
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-#endif
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
 #include <ctype.h>
 
 #include <iostream>
@@ -20,11 +16,13 @@ using namespace std;
 
 #define BUFFSIZE 1024
 
+/* protocol for request to server */
 struct requestMsg {
   int reqOpt;
   char login[BUFFSIZE-sizeof(int)];
 };
 
+/* protocol for response from server */
 struct responseMsg {
   int retVal;
   char msg[BUFFSIZE-sizeof(int)];
@@ -145,87 +143,106 @@ void createRequest(char *buffer,int reqOpt, string login) {
     cerr << "ERROR -99: internal error occured while creating request message\n";
     exit(-99);
   }
-  if (sizeof(login)+sizeof(int) > BUFFSIZE) {
+  if (sizeof(login)+sizeof(int) > BUFFSIZE) { // check login size
     cerr << "ERROR -98: login is too big!\n";
     exit(-98);
   }
-  memset(buffer, 0, BUFFSIZE);
-  struct requestMsg request;
-  request.reqOpt = reqOpt;
-  if (!login.empty()) {
+  memset(buffer, 0, BUFFSIZE); // clear buffer
+  struct requestMsg request; // create protocol for request
+  request.reqOpt = reqOpt; // setup request type
+  if (!login.empty()) { // if login is set setup login
     strcpy(request.login,login.c_str());
   } else {
     strcpy(request.login,"");
   }
-  memcpy(buffer,&request,sizeof(request));
+  memcpy(buffer,&request,sizeof(request)); // map protocol to buffer
 }
 
 int decodeResponse(char* buffer) {
   if (buffer == NULL) {
-    cerr << "ERROR -99: internal error occured while decoding client request\n";
+    cerr << "ERROR -99: internal error occured while decoding response from server\n";
     exit(-99);
   }
 
-  struct responseMsg response;
-  memcpy(&response,buffer,sizeof(response));
-  memset(buffer, 0, BUFFSIZE);
-  if (response.retVal < 0) {
+  struct responseMsg response; // create protocol for response
+  memcpy(&response,buffer,sizeof(response)); // map buffer to response protocol
+  memset(buffer, 0, BUFFSIZE); // clear buffer
+  if (response.retVal < 0) { // if error uccured read message to  stderr
     cerr << response.msg;
-    return response.retVal;
+    return response.retVal; // return error
   } else {
-    cout << response.msg << flush;
+    cout << response.msg << flush; // read message to stdout
   }
-  return response.retVal;
+  return response.retVal; // (0 if session ended successfuly and 1 if more messages are expected)
 }
 
 int main(int argc,char *argv[]) {
 
+  /* input argument parsing */
   struct Options options;
   int opt = parseOptions(argc,argv,&options);
   if (opt < 0) return opt;
+  ////////////////////////////
 
-  char sendBuff[BUFFSIZE];
-  char recBuff[BUFFSIZE];
+  /* creating buffers and socket */
+  char sendBuff[BUFFSIZE]; // sending buffer
+  char recBuff[BUFFSIZE]; // recieving buffer
   int clientSocket = socket(AF_INET, SOCK_STREAM,0);
   if (clientSocket <= 0) {
     cerr << "ERROR -3: socket creation failure\n";
     return -3;
   }
+  ////////////////////////////////////////////
 
-  int port = stoi(options.port,nullptr);
+  int port = stoi(options.port,nullptr); // string port num to int
 
-  
+  /* connecting to server */
+  struct hostent *server;
+  if ((server = gethostbyname(options.host.c_str())) == NULL) {
+    cerr << "ERROR -7: no such host as " << options.host << "\n";
+    return -7;
+  }
 
   struct sockaddr_in serverAddr;
+  bzero((char *) &serverAddr, sizeof(serverAddr));
   serverAddr.sin_family = AF_INET; // adress family = internet
   serverAddr.sin_port = htons(port);; // port assigmnet
-  //serverAddr.sin_addr.s_addr = inet_addr(options.host.c_str()); // set adress to host
+  bcopy((char *)server->h_addr, (char *)&serverAddr.sin_addr.s_addr,server->h_length);
 
   if (connect(clientSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
     cerr << "ERROR -4: connection failure\n";
     close(clientSocket);
     return -4;
   }
+  //////////////////////////
 
+  /* filling sending buffer with request */
   createRequest(sendBuff,opt,options.login);
+  /////////////////////////////////////////
 
+  /* sending buffer with request to server */
   if (send(clientSocket, sendBuff, BUFFSIZE, 0) < 0) {
     cerr << "ERROR -5: sending data failure\n";
     close(clientSocket);
     return -5;
   }
+  ///////////////////////////////////////////
 
+  /* recieving response from server */
   if(recv(clientSocket, recBuff, BUFFSIZE, 0) < 0) {
     cerr << "ERROR -6: recieving data failure\n";
     close(clientSocket);
     return -6;
   }
+  ///////////////////////////////////
 
-  int retVal = decodeResponse(recBuff);
+  /* decoding resposne from server */
+  int retVal = decodeResponse(recBuff); // if response response is full and OK 0 is returned
   while (retVal) {
-    if (retVal < 0) break;
+    if (retVal < 0) break; // if error occured from server negativ value is returned
 
-    if(recv(clientSocket, recBuff, BUFFSIZE, 0) < 0) {
+    // if more response is expected positive valie is returned
+    if(recv(clientSocket, recBuff, BUFFSIZE, 0) < 0) { // recieving aditional response
       cerr << "ERROR -6: recieving data failure\n";
       close(clientSocket);
       retVal =-6;
@@ -233,6 +250,7 @@ int main(int argc,char *argv[]) {
     }
     retVal = decodeResponse(recBuff);
   }
+  ////////////////////////////////////
 
   close(clientSocket);
   return retVal;

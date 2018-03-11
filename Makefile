@@ -1,20 +1,21 @@
-CC=g++
-CFLAGS=-I.
-CXXFLAGS= -std=c++11
+CC = g++
+CXXFLAGS = -g -std=c++11 -Wall -Wextra -pedantic
+LIBS   = -static-libstdc++
 
 all: ipk-client ipk-server
 
-ipk-client: ipk-client.o
-	$(CC) $(CXXFLAGS) -o ipk-client ipk-client.o $(CFLAGS)
+ipk-client:
+	$(CC) $(CXXFLAGS) $(LIBS) ipk-client.cpp -o ipk-client
 
-ipk-server: ipk-server.o
-	$(CC) $(CXXFLAGS) -o ipk-server ipk-server.o $(CFLAGS)
+ipk-server:
+	$(CC) $(CXXFLAGS) $(LIBS) ipk-server.cpp -o ipk-server
 
 clean:
-	rm -f ipk-client.o ipk-server.o
+	rm ipk-client
+	rm ipk-server
 
 testc: ipk-client
-	./ipk-client -h 127.0.0.1 -p 7891 -l x
+	./ipk-client -h 127.0.0.1 -p 7891 -l
 
 tests: ipk-server
 	./ipk-server -p 7891

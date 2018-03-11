@@ -1,11 +1,8 @@
 #include <sys/types.h>
-#ifdef _WIN32
-  #include <winsock2.h>
-#else
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-#endif
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +14,6 @@
 #include <string>
 #include <fstream>
 #include <regex>
-#include <map>
 using namespace std;
 
 #define BUFFSIZE 1024
