@@ -184,13 +184,14 @@ int main(int argc, char *argv[]) {
         string login;
         int requestType;
 
-        decodeRequest(recBuff,&login,&requestType);
+        decodeRequest(recBuff,&login,&requestType); // extract type of request and login from client request
+
         ifstream data( "/etc/passwd" );
         regex regExpr;
         struct responseMsg response;
         response.retVal = -1; // set error as default response value
-        int buffcnt = 0;
-        int col = 6;
+        int buffcnt = 0; // buffer counter
+        int col = 6; // col to extract for -n and -f options
 
         switch (requestType) { // servclient by his request type
           case 1:
@@ -280,11 +281,6 @@ int main(int argc, char *argv[]) {
       close(connectSocket);
     }
   }
-
-
-
-
-
 
   close(welcomeSocket);
   return 0;
