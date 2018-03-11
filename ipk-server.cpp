@@ -117,6 +117,10 @@ string parseLine(string line,unsigned col) {
   return result;
 }
 
+bool checkBufferOverflow(int buffcnt) {
+  return buffcnt >= (int)(BUFFSIZE-sizeof(int));
+}
+
 int main(int argc, char *argv[]) {
 
   /* program arguments parsing */
@@ -186,53 +190,24 @@ int main(int argc, char *argv[]) {
         struct responseMsg response;
         response.retVal = -1; // set error as default response value
         int buffcnt = 0;
+        int col = 6;
 
-        switch (requestType) { // serve to client by his request type
+        switch (requestType) { // servclient by his request type
           case 1:
             // -n option
-            regExpr = "^"+login+":.*";
-            for( std::string line; getline( data, line ); ) {
-              if (regex_match(line,regExpr)) {
-                response.retVal=0;
-                string userData = parseLine(line,5);
-                int i = 0;
-                char c;
-                c = userData.at(i);
-                while (true) {
-                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
-                    flushFullBuffer(sendBuff,&response,&buffcnt);
-                    send(connectSocket,sendBuff, BUFFSIZE, 0);
-                    memset(sendBuff,0,BUFFSIZE);
-                  }
-                  response.msg[buffcnt] = c;
-                  buffcnt++;
-                  if (c == '\n') {
-                    break;
-                  } else {
-                    c = userData.at(++i);
-                  }
-                }
-              }
-            }
-
-            if (response.retVal < 0) strcpy(response.msg, "SERVER ERROR: login not found\n");
-            memcpy(&sendBuff,&response,sizeof(response));
-            send(connectSocket, sendBuff, BUFFSIZE, 0);
-            memset(response.msg,0,BUFFSIZE-sizeof(int));
-            memset(sendBuff,0,BUFFSIZE);
-            break;
+            col = 5;
           case 2:
-            // -f
+            // -f option
             regExpr = "^"+login+":.*";
             for( std::string line; getline( data, line ); ) {
               if (regex_match(line,regExpr)) {
                 response.retVal=0;
-                string userData = parseLine(line,6);
+                string userData = parseLine(line,col);
                 int i = 0;
                 char c;
                 c = userData.at(i);
                 while (true) {
-                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                  if (checkBufferOverflow(buffcnt)) {
                     flushFullBuffer(sendBuff,&response,&buffcnt);
                     send(connectSocket,sendBuff, BUFFSIZE, 0);
                     memset(sendBuff,0,BUFFSIZE);
@@ -255,7 +230,7 @@ int main(int argc, char *argv[]) {
             memset(sendBuff,0,BUFFSIZE);
             break;
           case 3:
-            // -l
+            // -l option
             regExpr = "^"+login+".*:.*";
 
             for( string line; getline( data, line ); ) {
@@ -265,7 +240,7 @@ int main(int argc, char *argv[]) {
                 int i = 0;
                 c = line.at(i);
                 while (c != ':') {
-                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                  if (checkBufferOverflow(buffcnt)) {
                     flushFullBuffer(sendBuff,&response,&buffcnt);
                     send(connectSocket,sendBuff, BUFFSIZE, 0);
                     memset(sendBuff,0,BUFFSIZE);
@@ -274,7 +249,7 @@ int main(int argc, char *argv[]) {
                   buffcnt++;
                   c = line.at(++i);
                 }
-                if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                if (checkBufferOverflow(buffcnt)) {
                   flushFullBuffer(sendBuff,&response,&buffcnt);
                   send(connectSocket,sendBuff, BUFFSIZE, 0);
                   memset(sendBuff,0,BUFFSIZE);
