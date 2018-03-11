@@ -152,8 +152,10 @@ void createRequest(char *buffer,int reqOpt, string login) {
   memset(buffer, 0, BUFFSIZE);
   struct requestMsg request;
   request.reqOpt = reqOpt;
-  if (login.empty()) {
+  if (!login.empty()) {
     strcpy(request.login,login.c_str());
+  } else {
+    strcpy(request.login,"");
   }
   memcpy(buffer,&request,sizeof(request));
 }
@@ -166,6 +168,7 @@ int decodeResponse(char* buffer) {
 
   struct responseMsg response;
   memcpy(&response,buffer,sizeof(response));
+  memset(buffer, 0, BUFFSIZE);
   if (response.retVal < 0) {
     cerr << response.msg;
     return response.retVal;

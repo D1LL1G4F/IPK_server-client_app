@@ -78,12 +78,14 @@ void decodeRequest(char* buffer,string* login,int* requestType) {
 
   struct requestMsg request;
   memcpy(&request,buffer,sizeof(char)*BUFFSIZE);
+  memset(buffer,0,BUFFSIZE);
   *login = request.login;
   *requestType = request.reqOpt;
 }
 
 void flushFullBuffer(char *sendBuff,struct responseMsg* response,int *buffcnt) {
   response->retVal = 1;
+  memset(sendBuff,0,BUFFSIZE);
   memcpy(sendBuff,response,sizeof(struct responseMsg));
   memset(response->msg,0,BUFFSIZE-sizeof(int));
   *buffcnt = 0;
@@ -148,8 +150,27 @@ int main(int argc, char *argv[]) {
         switch (requestType) {
           case 1:
             // -n
+            regExpr = "^"+login+".*:.*";
             for( std::string line; getline( data, line ); ) {
-
+              if (regex_match(line,regExpr)) {
+                response.retVal=0;
+                regExpr = "^.*:.*:.*:.*:(.*):.*:";
+                cmatch cm;
+                string match;
+                regex_match(line.c_str(),cm,regExpr);
+                match = cm[0];
+                int i = 0;
+                while (i<match.size()) {
+                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                    flushFullBuffer(sendBuff,&response,&buffcnt);
+                    send(connectSocket,sendBuff, BUFFSIZE, 0);
+                    memset(sendBuff,0,BUFFSIZE);
+                  }
+                  response.msg[buffcnt] = match.at(i);
+                  buffcnt++;
+                  i++;
+                }
+              }
             }
             break;
           case 2:
@@ -188,6 +209,7 @@ int main(int argc, char *argv[]) {
             if (response.retVal < 0) strcpy(response.msg, "SERVER ERROR: login not found\n");
             memcpy(&sendBuff,&response,sizeof(response));
             send(connectSocket, sendBuff, BUFFSIZE, 0);
+            memset(response.msg,0,BUFFSIZE-sizeof(int));
             memset(sendBuff,0,BUFFSIZE);
 
 

@@ -14,7 +14,7 @@ clean:
 	rm -f ipk-client.o ipk-server.o
 
 testc: ipk-client
-	./ipk-client -h 127.0.0.1 -p 7891 -l 
+	./ipk-client -h 127.0.0.1 -p 7891 -l x
 
 tests: ipk-server
 	./ipk-server -p 7891
