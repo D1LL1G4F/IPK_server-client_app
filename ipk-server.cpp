@@ -91,6 +91,27 @@ void flushFullBuffer(char *sendBuff,struct responseMsg* response,int *buffcnt) {
   *buffcnt = 0;
 }
 
+string parseLine(string line,unsigned col) {
+  string result;
+  unsigned delimCnt = 0;
+  int i = 0;
+  while(delimCnt<col-1) {
+    if(line.at(i++)==':') {
+      delimCnt++;
+    }
+  }
+  int j = 0;
+  int start = i;
+
+  while (line.at(i) != ':') {
+    i++;
+    j++;
+  }
+  result = line.substr(start,j);
+  result = result + "\n";
+  return result;
+}
+
 int main(int argc, char *argv[]) {
 
   string portArg;
@@ -150,31 +171,69 @@ int main(int argc, char *argv[]) {
         switch (requestType) {
           case 1:
             // -n
-            regExpr = "^"+login+".*:.*";
+            regExpr = "^"+login+":.*";
             for( std::string line; getline( data, line ); ) {
               if (regex_match(line,regExpr)) {
                 response.retVal=0;
-                regExpr = "^.*:.*:.*:.*:(.*):.*:";
-                cmatch cm;
-                string match;
-                regex_match(line.c_str(),cm,regExpr);
-                match = cm[0];
+                string userData = parseLine(line,5);
                 int i = 0;
-                while (i<match.size()) {
+                char c;
+                c = userData.at(i);
+                while (true) {
                   if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
                     flushFullBuffer(sendBuff,&response,&buffcnt);
                     send(connectSocket,sendBuff, BUFFSIZE, 0);
                     memset(sendBuff,0,BUFFSIZE);
                   }
-                  response.msg[buffcnt] = match.at(i);
+                  response.msg[buffcnt] = c;
                   buffcnt++;
-                  i++;
+                  if (c == '\n') {
+                    break;
+                  } else {
+                    c = userData.at(++i);
+                  }
                 }
               }
             }
+
+            if (response.retVal < 0) strcpy(response.msg, "SERVER ERROR: login not found\n");
+            memcpy(&sendBuff,&response,sizeof(response));
+            send(connectSocket, sendBuff, BUFFSIZE, 0);
+            memset(response.msg,0,BUFFSIZE-sizeof(int));
+            memset(sendBuff,0,BUFFSIZE);
             break;
           case 2:
             // -f
+            regExpr = "^"+login+":.*";
+            for( std::string line; getline( data, line ); ) {
+              if (regex_match(line,regExpr)) {
+                response.retVal=0;
+                string userData = parseLine(line,6);
+                int i = 0;
+                char c;
+                c = userData.at(i);
+                while (true) {
+                  if (buffcnt >= (int)(BUFFSIZE-sizeof(int))) {
+                    flushFullBuffer(sendBuff,&response,&buffcnt);
+                    send(connectSocket,sendBuff, BUFFSIZE, 0);
+                    memset(sendBuff,0,BUFFSIZE);
+                  }
+                  response.msg[buffcnt] = c;
+                  buffcnt++;
+                  if (c == '\n') {
+                    break;
+                  } else {
+                    c = userData.at(++i);
+                  }
+                }
+              }
+            }
+
+            if (response.retVal < 0) strcpy(response.msg, "SERVER ERROR: login not found\n");
+            memcpy(&sendBuff,&response,sizeof(response));
+            send(connectSocket, sendBuff, BUFFSIZE, 0);
+            memset(response.msg,0,BUFFSIZE-sizeof(int));
+            memset(sendBuff,0,BUFFSIZE);
             break;
           case 3:
             // -l

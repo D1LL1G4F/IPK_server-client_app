@@ -136,7 +136,7 @@ int parseOptions(int argc, char *argv[],Options *option) {
     return -2;
   }
 
-  cerr << "ERROR -1: missing [-n|-f|-l] option, usage: ./ipk-client -h host -p port [-n|-f|-l] login \n";
+  cerr << "ERROR -1: missing option, usage: ./ipk-client -h host -p port [-n|-f|-l] login \n";
   return -1;
 }
 
@@ -194,10 +194,12 @@ int main(int argc,char *argv[]) {
 
   int port = stoi(options.port,nullptr);
 
+  
+
   struct sockaddr_in serverAddr;
   serverAddr.sin_family = AF_INET; // adress family = internet
   serverAddr.sin_port = htons(port);; // port assigmnet
-  serverAddr.sin_addr.s_addr = inet_addr(options.host.c_str()); // set adress to host
+  //serverAddr.sin_addr.s_addr = inet_addr(options.host.c_str()); // set adress to host
 
   if (connect(clientSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
     cerr << "ERROR -4: connection failure\n";
