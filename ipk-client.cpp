@@ -1,3 +1,9 @@
+/* PROJECT no.1 for IPK (client/server app)
+*
+* author: Matej Knazik
+* login: xknazi00
+*/
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -178,7 +184,7 @@ int decodeResponse(char* buffer) {
 
 int main(int argc,char *argv[]) {
 
-  /* input argument parsing */
+  /* program arguments parsing */
   struct Options options;
   int opt = parseOptions(argc,argv,&options);
   if (opt < 0) return opt;

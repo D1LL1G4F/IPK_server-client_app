@@ -1,3 +1,10 @@
+/* PROJECT no.1 for IPK (client/server app)
+*
+* author: Matej Knazik
+* login: xknazi00
+*/
+
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -18,11 +25,13 @@ using namespace std;
 
 #define BUFFSIZE 1024
 
+/* protocol for request from client */
 struct requestMsg {
   int reqOpt;
   char login[BUFFSIZE-sizeof(int)];
 };
 
+/* protocol for response to client */
 struct responseMsg {
   int retVal;
   char msg[BUFFSIZE-sizeof(int)];
@@ -72,11 +81,11 @@ void decodeRequest(char* buffer,string* login,int* requestType) {
     exit(-99);
   }
 
-  struct requestMsg request;
-  memcpy(&request,buffer,sizeof(char)*BUFFSIZE);
-  memset(buffer,0,BUFFSIZE);
-  *login = request.login;
-  *requestType = request.reqOpt;
+  struct requestMsg request; // create protocol for request
+  memcpy(&request,buffer,sizeof(char)*BUFFSIZE); // map buffer to protocol
+  memset(buffer,0,BUFFSIZE); // emppty buffer
+  *login = request.login; // set recieved login
+  *requestType = request.reqOpt; // set recieved option from client
 }
 
 void flushFullBuffer(char *sendBuff,struct responseMsg* response,int *buffcnt) {
@@ -110,18 +119,23 @@ string parseLine(string line,unsigned col) {
 
 int main(int argc, char *argv[]) {
 
+  /* program arguments parsing */
   string portArg;
   int errCheck = parseOptions(argc,argv,&portArg);
   if (errCheck) return errCheck;
+  ///////////////////////////////
 
+  /* setting up welcome socket */
   int welcomeSocket = socket(AF_INET, SOCK_STREAM,0);
   if (welcomeSocket <= 0) {
     cerr << "ERROR -3: socket creation failure\n";
     return -3;
   }
+  /////////////////////////////
 
-  int port = stoi(portArg,nullptr);
+  int port = stoi(portArg,nullptr); // string port num to int
 
+  /* binding welcome socket */
   struct sockaddr_in serverAddr;
   serverAddr.sin_family = AF_INET; // adress family = internet
   serverAddr.sin_addr.s_addr = INADDR_ANY; // listen to any interface
@@ -132,26 +146,35 @@ int main(int argc, char *argv[]) {
     close(welcomeSocket);
     return -4;
   }
+  ////////////////////////////
 
+  /* seting up listener */
   if ((listen(welcomeSocket, 10)) < 0) { // listen to max 10 connections
     cerr << "ERROR -5: server listen failure\n";
     close(welcomeSocket);
     return -5;
   }
+  ////////////////////////
 
   while(true) {
     struct sockaddr_storage serverStorage;
     socklen_t storSize = sizeof(serverStorage);
-    int connectSocket = accept(welcomeSocket,(struct sockaddr*)&serverStorage, &storSize);
-    if (connectSocket > 0) {
+    int connectSocket = accept(welcomeSocket,(struct sockaddr*)&serverStorage, &storSize); // wait for established connection
+    if (connectSocket > 0) { // connection is established
       char sendBuff[BUFFSIZE];
       char recBuff[BUFFSIZE];
 
       int res = 0;
+
+      /* read/write section */
       while (true) {
+
+        // clear buffers
         memset(recBuff, 0, BUFFSIZE);
         memset(sendBuff,0,BUFFSIZE);
-        res = recv(connectSocket, recBuff, BUFFSIZE,0);
+
+
+        res = recv(connectSocket, recBuff, BUFFSIZE,0);// recieve message from client
         if (res <= 0) break;
 
         string login;
@@ -161,12 +184,12 @@ int main(int argc, char *argv[]) {
         ifstream data( "/etc/passwd" );
         regex regExpr;
         struct responseMsg response;
-        response.retVal = -1;
+        response.retVal = -1; // set error as default response value
         int buffcnt = 0;
 
-        switch (requestType) {
+        switch (requestType) { // serve to client by his request type
           case 1:
-            // -n
+            // -n option
             regExpr = "^"+login+":.*";
             for( std::string line; getline( data, line ); ) {
               if (regex_match(line,regExpr)) {
