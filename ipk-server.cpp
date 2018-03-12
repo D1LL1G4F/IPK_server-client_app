@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         int buffcnt = 0; // buffer counter
         int col = 6; // col to extract for -n and -f options
 
-        switch (requestType) { // servclient by his request type
+        switch (requestType) { // serve client by his request type
           case 1:
             // -n option
             col = 5;
